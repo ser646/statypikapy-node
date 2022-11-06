@@ -11,9 +11,7 @@ app.get('/', function(req, res) {
   res.sendFile(path.join(__dirname, '../site/index.html'));
 });
 
-app.use('/api/logs', require("./logs.js"));
+app.use('/api/logs', require("./api/logs.js"));
 
 app.listen(port);
-console.log('Server started at http://localhost:' + port);
-
 module.exports = app;
