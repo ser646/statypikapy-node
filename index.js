@@ -14,4 +14,7 @@ app.get('/', function(req, res) {
 app.use('/api/logs', require("./api/logs.js"));
 
 app.listen(port);
+
+console.log('Server started at http://localhost:' + port);
+
 module.exports = app;
