@@ -1,4 +1,4 @@
-const uri = "http://localhost:8080/api";
+const uri = "/api";
 
 $('#logs_list').flowtype({
     minFont   : 13,
