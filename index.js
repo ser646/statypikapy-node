@@ -9,9 +9,9 @@ const PORT = 8080;
 const HOST = 'localhost';
 
 app.use(express.json());
-app.use(express.static("site"));
+app.use(express.static("public"));
 
-app.use('/', express.static('site'))
+app.use('/', express.static('public'))
 
 app.use('/api/logs', require("./api/logs.js"));
 app.use('/api/hof', require("./api/hof.js"));
