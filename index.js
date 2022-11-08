@@ -9,7 +9,6 @@ const PORT = 8080;
 const HOST = 'localhost';
 
 app.use(express.json());
-app.use(express.static("public"));
 
 app.use('/', express.static('public'))
 
