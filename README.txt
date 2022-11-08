@@ -1,0 +1,1 @@
+Change .env file to match like in .env.example file, but replace with your data
