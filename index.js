@@ -6,7 +6,6 @@ const path = require('path');
 
 // Constants
 const PORT = 8080;
-const HOST = 'localhost';
 
 app.use(express.json());
 
@@ -19,8 +18,8 @@ app.use('/api/player_logs/', require("./api/player_logs.js"));
 app.use('/api/profile/', require("./api/profile.js"));
 
 const server = http.createServer(app);
-server.listen(PORT, HOST, () => {
-  console.log(`Running on http://${HOST}:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Running on http://localhost:${PORT}`);
 });
 
 module.exports = app;
