@@ -5,8 +5,8 @@ const app = express();
 const path = require('path');
 
 // Constants
-const PORT = 8080;
-const HOST = 'localhost';
+const PORT = process.env.PORT || 8080;
+const HOST = process.env.HOST || 'localhost';
 
 app.use(express.json());
 app.use(express.static('public'))

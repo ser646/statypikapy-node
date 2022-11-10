@@ -18,6 +18,7 @@ router.get('/:option', async (req, res) => {
 
     let title = process.env.LOGSTF_TITLE;
     let use_tf2pickup_api = Number(process.env.USE_TF2PICKUP_API)
+    let tf2pickup_api_limit = Number(process.env.TF2PICKUP_API_LIMIT)
 
     let mode = process.env.MATCH_FORMAT;
     let lt = 0;
@@ -45,14 +46,15 @@ router.get('/:option', async (req, res) => {
     else {
         if(option == 'diff'){
             let p1 = fetch(`https://logs.tf/api/v1/log?title=${title}&limit=10000`)
-            .then(r => r.json()).then(r => {
+            .then(r => r.json())
+            .then(r => {
                 let logs = [];
                 for(let l of r.logs){
                     if(l.players > gt && l.players < lt)logs.push(`${l.id}`)
                 }
                 return logs;
-            })  
-            let p2 = use_tf2pickup_api ? fetch(`https://api.${title}/games?limit=100`)
+            }) 
+            let p2 = use_tf2pickup_api ? fetch(`https://api.${title}/games?limit=${tf2pickup_api_limit}`)
             .then(r => r.json()).then(r => {
                 let logs = [];
                 for(let l of r.results){
@@ -66,6 +68,7 @@ router.get('/:option', async (req, res) => {
             Promise.all([p1,p2,p3]).then(r => {
                 let diff1 = r[0].filter(x => !r[2].includes(x));
                 let diff2 = r[1].filter(x => !r[2].includes(x));
+                diff1 = r[0].filter(x => !r[1].includes(x)); 
                 let diff = diff1.concat(diff2)
                 res.status(200).json(diff);
             })
@@ -152,55 +155,11 @@ router.post('/', async (req, res) => {
     const db = await connectToDatabase();
     let matchid = req.query['id'];
     if(matchid)
-    fetch('http://logs.tf/api/v1/log/'+matchid).then(r => r.json()).then(r => {   
-        r['_id'] = matchid;
-        r['players_count'] = Object.keys(r.players).length;
-        db.collection('logs').insertOne(r)
-        .then(_ => {
-            res.json({status : 'Success'});
-        }).catch(e => {
-            if(e.code == 11000)e = "id already exists";
-            res.json({status : 'MongoDB Failure', error : e});
-            console.log(e)
-        })
-    }).catch(e => {
-        res.json({status : 'Logs.tf failure', error : e});
-        console.log(e)
-    })
-    else res.status(400).json({status : 'Failure', error : "no id"});
-})
-
-module.exports = router;
-
-/*
-module.exports = async (req, res) => {
-    const db = await connectToDatabase();
-    if(req.method == "GET"){ 
-        db.collection('logs').distinct('_id', {}, {}, function (err, result) {
-            res.status(200).json(result);
-        })
-    }
-    else if(req.method == "DELETE"){
-        let n = Number(req.query['amount']);
-        if(n){
-            db.collection('logs').distinct('_id', {}, {}, function (err, result) {
-                for(var i=result.length;i>result.length-n;i--){
-                    db.collection('logs').deleteOne({_id : result[i]}, function(err, obj) {
-                        if (err) throw err;
-                    });
-                }
-                var p2 = db.collection('logs').distinct('_id', {}, {}).then(r => {
-                console.log('Deleted: '+n+' rows. Remaining: '+r.length)
-                res.status(200).json({status : "Success", deleted_rows:  n,remaining_logs: r.length});
-                })
-            })
-        }
-        else res.status(400).json({status : "Failure"});  
-    }
-    else if(req.method == "POST"){
-        let matchid = req.query['id'];
-        if(matchid)
-        fetch('http://logs.tf/api/v1/log/'+matchid).then(r => r.json()).then(r => {   
+    fetch('http://logs.tf/api/v1/log/'+matchid)
+    .then(r => {
+        const contentType = r.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          return r.json().then(r => {   
             r['_id'] = matchid;
             r['players_count'] = Object.keys(r.players).length;
             db.collection('logs').insertOne(r)
@@ -214,11 +173,12 @@ module.exports = async (req, res) => {
         }).catch(e => {
             res.json({status : 'Logs.tf failure', error : e});
             console.log(e)
-        })
-        else res.status(400).json({status : 'Failure', error : "no id"});
-    }
-    else{
-        res.status(400).json({status: "ERROR ROUTE NOT FOUND"});
-    }
-};
-*/
+        });
+        } else {
+            res.json({status : 'Logs.tf failure', error : r.status});
+        }
+    })
+    else res.status(400).json({status : 'Failure', error : "no id"});
+})
+
+module.exports = router;
