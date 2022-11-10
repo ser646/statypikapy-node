@@ -18,7 +18,7 @@ router.get('/:option', async (req, res) => {
 
     let title = process.env.LOGSTF_TITLE;
     let use_tf2pickup_api = Number(process.env.USE_TF2PICKUP_API)
-    let tf2pickup_api_limit = 100
+    let tf2pickup_api_limit = Number(process.env.TF2PICKUP_API_LIMIT)
 
     let mode = process.env.MATCH_FORMAT;
     let lt = 0;
@@ -54,8 +54,7 @@ router.get('/:option', async (req, res) => {
                 }
                 return logs;
             }) 
-            console.log(`https://api.${title}/games?limit=${tf2pickup_api_limit}`)
-            let p2 = use_tf2pickup_api ? fetch(`https://api.${title}/games?limit=${tf2pickup_api_limit}`)
+            let p2 = use_tf2pickup_api ? fetch(`https://api.${title}/games?limit=100`)
             .then(r => r.json()).then(r => {
                 let logs = [];
                 for(let l of r.results){
