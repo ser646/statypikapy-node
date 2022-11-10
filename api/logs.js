@@ -54,7 +54,8 @@ router.get('/:option', async (req, res) => {
                 }
                 return logs;
             }) 
-            let p2 = use_tf2pickup_api ? fetch(`https://api.${title}/games?limit=100`)
+            console.log(`https://api.${title}/games?limit=${tf2pickup_api_limit}`)
+            let p2 = use_tf2pickup_api ? fetch(`https://api.${title}/games?limit=${tf2pickup_api_limit}`)
             .then(r => r.json()).then(r => {
                 let logs = [];
                 for(let l of r.results){
