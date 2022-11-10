@@ -18,7 +18,7 @@ router.get('/:option', async (req, res) => {
 
     let title = process.env.LOGSTF_TITLE;
     let use_tf2pickup_api = Number(process.env.USE_TF2PICKUP_API)
-    let tf2pickup_api_limit = Number(process.env.TF2PICKUP_API_LIMIT)
+    let tf2pickup_api_limit = 100
 
     let mode = process.env.MATCH_FORMAT;
     let lt = 0;
