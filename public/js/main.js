@@ -288,13 +288,14 @@ var app = new Vue({
                 data: d
             }]  
         },
-        update : function (){
-            fetch(uri+'/logs/diff').then(r => r.json()).then(r => {
+        update : async function (){
+            fetch(uri+'/logs/diff').then(r => r.json()).then(async (r) => {
                 app.logs_to_download = r;
+                const len = r.length
                 app.logs_to_download_total = r.length
                 if(r.length > 0){
-                    for(i = 0;i<r.length;i++){
-                        app.downloadLog(r[i]);
+                    for (i = 0;i<len;i++){
+                        await app.downloadLog(r[0]);
                     }
                 }
                 else {
@@ -308,8 +309,8 @@ var app = new Vue({
         changeTimeRange : function(event){
             store.state.logs_time_range = event.target.attributes.value.value;
         },
-        downloadLog : function (matchid){           
-            fetch(uri+'/logs?id='+matchid,{method: "POST"}).then(r => r.json()).then(r => {
+        downloadLog : async function (matchid){           
+            await fetch(uri+'/logs?id='+matchid,{method: "POST"}).then(r => r.json()).then(r => {
                 if(r.status == 'Success'){    
                     app.logs_to_download.shift();
                     console.log(app.logs_to_download.length)

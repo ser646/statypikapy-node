@@ -2,8 +2,11 @@ const express = require('express')
 const router = express.Router();
 const connectToDatabase = require('../lib/database');
 const dateFunctions = require('../lib/dateFunctions');
+const bodyParser = require('body-parser')
 
 const fetch = require('node-fetch');
+
+router.use(bodyParser.json())
 
 router.get('/', async (req, res) => {
     const db = await connectToDatabase();
@@ -12,13 +15,9 @@ router.get('/', async (req, res) => {
     })
 })
 
-router.get('/:option', async (req, res) => {
+router.get('/:option', async (req, res, next) => {
     const db = await connectToDatabase();
     const option = req.params.option;
-
-    let title = process.env.LOGSTF_TITLE;
-    let use_tf2pickup_api = Number(process.env.USE_TF2PICKUP_API)
-    let tf2pickup_api_limit = Number(process.env.TF2PICKUP_API_LIMIT)
 
     let mode = process.env.MATCH_FORMAT;
     let lt = 0;
@@ -44,36 +43,7 @@ router.get('/:option', async (req, res) => {
         });
     }
     else {
-        if(option == 'diff'){
-            let p1 = fetch(`https://logs.tf/api/v1/log?title=${title}&limit=10000`)
-            .then(r => r.json())
-            .then(r => {
-                let logs = [];
-                for(let l of r.logs){
-                    if(l.players > gt && l.players < lt)logs.push(`${l.id}`)
-                }
-                return logs;
-            }) 
-            let p2 = use_tf2pickup_api ? fetch(`https://api.${title}/games?limit=100`)
-            .then(r => r.json()).then(r => {
-                let logs = [];
-                for(let l of r.results){
-                    let len = Object.keys(l.slots).length;
-                    if(l.logsUrl && len > gt  && len < lt)
-                        logs.push(l.logsUrl.slice(-7))
-                }
-                return logs;
-            }) : [];
-            let p3 = db.collection('logs').distinct('_id', {}, {})
-            Promise.all([p1,p2,p3]).then(r => {
-                let diff1 = r[0].filter(x => !r[2].includes(x));
-                let diff2 = r[1].filter(x => !r[2].includes(x));
-                diff1 = r[0].filter(x => !r[1].includes(x)); 
-                let diff = diff1.concat(diff2)
-                res.status(200).json(diff);
-            })
-        }
-        else if(option == "weekly" || option == "monthly" || option == "all"){
+        if(option == "weekly" || option == "monthly" || option == "all"){
             let time_range = option;
             let dt = new Date();
             if(time_range == 'all')dt = 1;
@@ -120,13 +90,52 @@ router.get('/:option', async (req, res) => {
             })
         }
     }
+    next();
+})
+
+router.get('/diff', async (req, res) => {
+    const r = await require('./shared/diff.js')();
+    res.status(200).json(r);
+})
+
+router.get('/fetch', async (req, res) => {
+    const diff = req.body.ids|| await require('./shared/diff.js')();
+    const fetchMatch = require('./shared/fetch.js');
+    
+    console.log("Amount of logs requested to fetch: " + diff.length)
+    let i = 0;
+	let c = 0;
+    let interval = setInterval(async function (){
+
+        if(i >= diff.length - 1)clearInterval(interval);
+        else {
+            if(c == 0){	
+                if(i % 400 == 0 && i != 0) {
+                    c++;
+                    i++;
+                }
+                else {
+                    await fetchMatch(diff[i]).then(r => {
+                        console.log(i + ':' + diff[i] + " " + r.status + " " + r.error)
+                        i++;
+                    });
+                }
+            }
+            else {
+                c++;
+            }
+            if(c == (5*240)){
+                c = 0;
+            }
+        }
+    },250)
+    res.status(200).json("Logs to fetch: " + diff.length + ". Fetching started.");
 })
 
 router.delete('/', async (req, res) => {
     const db = await connectToDatabase();
 
-    let n = Number(req.query['amount']);
-
+    let n = Number(req.query.amount);
     if(n){
         db.collection('logs').distinct('_id', {}, {}, function (err, result) {
             for(var i=result.length;i>result.length-n;i--){
@@ -152,33 +161,8 @@ router.delete('/:id', async (req, res) => {
 })
 
 router.post('/', async (req, res) => {
-    const db = await connectToDatabase();
-    let matchid = req.query['id'];
-    if(matchid)
-    fetch('http://logs.tf/api/v1/log/'+matchid)
-    .then(r => {
-        const contentType = r.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-          return r.json().then(r => {   
-            r['_id'] = matchid;
-            r['players_count'] = Object.keys(r.players).length;
-            db.collection('logs').insertOne(r)
-            .then(_ => {
-                res.json({status : 'Success'});
-            }).catch(e => {
-                if(e.code == 11000)e = "id already exists";
-                res.json({status : 'MongoDB Failure', error : e});
-                console.log(e)
-            })
-        }).catch(e => {
-            res.json({status : 'Logs.tf failure', error : e});
-            console.log(e)
-        });
-        } else {
-            res.json({status : 'Logs.tf failure', error : r.status});
-        }
-    })
-    else res.status(400).json({status : 'Failure', error : "no id"});
+    const r = await require('./shared/fetch.js')(req.query['id']);
+    res.status(200).json(r);
 })
 
 module.exports = router;
