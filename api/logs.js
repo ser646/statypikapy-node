@@ -89,13 +89,11 @@ router.get('/:option', async (req, res, next) => {
                 else res.status(200).json(r);
             })
         }
+        else if(option == "diff"){
+            const r = await require('./shared/diff.js')();
+            res.status(200).json(r);
+        }
     }
-    next();
-})
-
-router.get('/diff', async (req, res) => {
-    const r = await require('./shared/diff.js')();
-    res.status(200).json(r);
 })
 
 router.get('/fetch', async (req, res) => {
