@@ -171,7 +171,7 @@
 					</div>
 					<div v-if='!loading && !filtered_player_logs || !loading && filtered_player_logs.length == 0'>Player didn't play any games in this time range</div>
 					<div v-for='log of filtered_player_logs' class='d-flex player_log_wrap softui' v-bind:class='log.result == "won" ?  "bg-green" : log.result == "tied" ? "bg-grey" : "bg-red"'>
-						<div class='map-thumbnail' v-bind:title='log.map' v-bind:style="'border-bottom-left-radius: 10px;border-top-left-radius: 10px;width: 50px;background-position: center;background-image: url(assets/map_thumbnails/' + log.map.split('_')[1] + '.png), url(assets/map_thumbnails/unknown.png);'" ></div>
+						<div class='map-thumbnail' v-bind:title='log.map' v-bind:style="'border-bottom-left-radius: 10px;border-top-left-radius: 10px;width: 50px;background-position: center;background-image: url(public/assets/map_thumbnails/' + log.map.split('_')[1] + '.png), url(public/assets/map_thumbnails/unknown.png);'" ></div>
 						<div>
 							<i v-for='c of log.classes' class='classes' v-bind:class="c">
 							</i>  
@@ -231,7 +231,7 @@
 	<div v-bind:class="{'log-wrap-active': show_details}" class='log-wrap softui hover' >
 	<div  class='log-info clickable d-flex justify-center' @click='toggle'>
 		<div title='matchid'>{{ lkey._id }}</div>
-		<div v-bind:title='lkey.map' v-bind:style="'background-image: url(assets/map_thumbnails/' + lkey.map.split('_')[1] + '.png), url(assets/map_thumbnails/unknown.png);'" ></div>
+		<div v-bind:title='lkey.map' v-bind:style="'background-image: url(public/assets/map_thumbnails/' + lkey.map.split('_')[1] + '.png), url(public/assets/map_thumbnails/unknown.png);'" ></div>
 		<div title='Red score'>{{ lkey.result.Red }}</div>
 		<div title='Blu score'>{{ lkey.result.Blue }}</div>
 		<div title='date'>{{ lkey.date }}</div>
