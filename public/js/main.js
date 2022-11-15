@@ -289,14 +289,20 @@ var app = new Vue({
             }]  
         },
         update : async function (){
-            fetch(uri+'/logs/diff').then(r => r.json()).then(async (r) => {
+            fetch(uri+'/logs/diff').then(r => r.json()).then(r => {
                 app.logs_to_download = r;
                 const len = r.length
                 app.logs_to_download_total = r.length
                 if(r.length > 0){
-                    for (i = 0;i<len;i++){
-                        await app.downloadLog(r[0]);
-                    }
+                    let i = 0;
+                    let interval = setInterval(function (){
+                        if(i >= len)clearInterval(interval);
+                        else {
+                            app.downloadLog(r[0]);
+                            app.logs_to_download.shift();
+                            i++;
+                        }
+                    },250)
                 }
                 else {
                     app.main();
@@ -309,15 +315,18 @@ var app = new Vue({
         changeTimeRange : function(event){
             store.state.logs_time_range = event.target.attributes.value.value;
         },
-        downloadLog : async function (matchid){           
-            await fetch(uri+'/logs?id='+matchid,{method: "POST"}).then(r => r.json()).then(r => {
+        downloadLog : function (matchid){           
+            fetch(uri+'/logs?id='+matchid,{method: "POST"}).then(r => r.json()).then(r => {
                 if(r.status == 'Success'){    
-                    app.logs_to_download.shift();
-                    console.log(app.logs_to_download.length)
+                    console.log(app.logs_to_download.length + ':' + matchid + ' ' + r.status)
                     document.getElementById('update_info').innerText = "Logs to download: " + app.logs_to_download.length;
                     if(app.logs_to_download.length == 0){app.main()}
                 }
-                else console.log(r);
+                else {
+                    app.logs_to_download.push(matchid);
+                    document.getElementById('update_info').innerText = "Logs to download: " + app.logs_to_download.length;
+                    console.log(r)
+                };
             })
         },
         getLog: function (matchid){   
