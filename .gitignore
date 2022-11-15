@@ -1,2 +1,4 @@
 .env
 public/firebaseConfig.js
+.vercel
+.vercelignore
