@@ -2,3 +2,4 @@
 public/firebaseConfig.js
 .vercel
 .vercelignore
+node_modules
