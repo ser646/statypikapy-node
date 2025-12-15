@@ -1,38 +1,34 @@
 const connectToDatabase = require("../../lib/database");
 const fetch = require("node-fetch");
-const fs = require("fs");
-const path = require("path");
 
-// Function to load excluded match IDs from file
-function loadExcludedMatches() {
+// Function to load excluded match IDs from database
+async function loadExcludedMatches(db) {
   try {
-    const excludedFilePath = path.join(__dirname, "../../excluded_logs.txt");
-
-    // Check if file exists
-    if (!fs.existsSync(excludedFilePath)) {
-      return [];
-    }
-
-    // Read file and parse
-    const content = fs.readFileSync(excludedFilePath, "utf8");
-    const excludedIds = content
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0 && !line.startsWith("#")) // Filter empty lines and comments
-      .map((id) => String(id)); // Ensure all IDs are strings
-
+    const excludedMatches = await db
+      .collection("excluded_logs")
+      .distinct("_id", {});
     console.log(
-      `Loaded ${excludedIds.length} excluded match IDs from excluded_logs.txt`,
+      `Loaded ${excludedMatches.length} excluded match IDs from database`,
     );
-    return excludedIds;
+    return excludedMatches.map((id) => String(id));
   } catch (error) {
-    console.error("Error loading excluded_logs.txt:", error.message);
+    console.error(
+      "Error loading excluded matches from database:",
+      error.message,
+    );
     return [];
   }
 }
 
 module.exports = async function () {
   const db = await connectToDatabase();
+
+  // Check if db connection is valid
+  if (!db) {
+    console.error("Failed to connect to database");
+    return [];
+  }
+
   let use_tf2pickup_api = Number(process.env.USE_TF2PICKUP_API);
   let tf2pickup_api_limit = Number(process.env.TF2PICKUP_API_LIMIT);
   let title = process.env.LOGSTF_TITLE;
@@ -49,10 +45,10 @@ module.exports = async function () {
     gt = 15;
   }
 
-  // Load excluded match IDs
-  const excludedMatches = loadExcludedMatches();
+  // Load excluded match IDs - ADDED AWAIT HERE
+  const excludedMatches = await loadExcludedMatches(db);
 
-  let p1 = fetch(`https://logs.tf/api/v1/log?title=${title}&limit=1000`)
+  let p1 = fetch(`https://logs.tf/api/v1/log?title=${title}&limit=10000`)
     .then((r) => {
       if (!r.ok) {
         throw new Error(`HTTP error! status: ${r.status}`);
