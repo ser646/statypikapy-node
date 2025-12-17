@@ -24,29 +24,53 @@ router.get('/:option', async (req, res) => {
         gt = 15;
     }
 
-    if(option == "weekly" || option == "monthly" || option == "all"){
+    if(option == "weekly" || option == "monthly" || option == "all" || option == "event_christmas_2025"){
         let time_range = option;
         let dt = new Date();
-        if(time_range == 'all')dt = 1;
-        else if(time_range == 'weekly')dt =  dateFunctions.startOfWeek(dt);
-        else if(time_range == 'monthly')dt =  dateFunctions.startOfMonth(dt);
-        let z = new Date(dt);
-        z = z.getTime()
+        let matchQuery = {};
+
+        if(time_range == 'event_christmas_2025'){
+            // Event timeframe: 19.12.2025 16:00 till 4.01.2026 00:00
+            let eventStart = dateFunctions.event_christmas_2025_Start();
+            let eventEnd = dateFunctions.event_christmas_2025_End();
+            matchQuery = {
+                'info.date': {
+                    '$gte': eventStart.getTime() / 1000,
+                    '$lte': eventEnd.getTime() / 1000
+                },
+                'players_count': {
+                    '$lt': lt,
+                    '$gt' : gt
+                }
+            };
+        } else {
+            if(time_range == 'all')dt = 1;
+            else if(time_range == 'weekly')dt =  dateFunctions.startOfWeek(dt);
+            else if(time_range == 'monthly')dt =  dateFunctions.startOfMonth(dt);
+            let z = new Date(dt);
+            z = z.getTime()
+
+            matchQuery = {
+                'info.date': {
+                    '$gt': z / 1000
+                },
+                'players_count': {
+                    '$lt': lt,
+                    '$gt' : gt
+                }
+            };
+        }
 
         let players = {};
         let steamids = [];
         let steamids64 = [];
-                    
+
         db.collection('logs').aggregate([
             {
-            '$match': {
-                'info.date': {
-                '$gt': z / 1000
-                }, 
-                'players_count': {
-                '$lt': lt,
-                '$gt' : gt
-            },
+            '$match': matchQuery
+            }, {
+            '$sort': {
+                'info.date': 1
             }
             }, {
             '$project': {
@@ -54,13 +78,13 @@ router.get('/:option', async (req, res) => {
                 '$map': {
                     'input': {
                     '$objectToArray': '$players'
-                    }, 
-                    'as': 'p', 
+                    },
+                    'as': 'p',
                     'in': {'id' : '$$p.k','team' : '$$p.v.team'}
                 }
-                }, 
+                },
                 'score': {
-                'Blue': '$teams.Blue.score', 
+                'Blue': '$teams.Blue.score',
                 'Red': '$teams.Red.score'
                 },
                 'names' : 1
@@ -78,10 +102,10 @@ router.get('/:option', async (req, res) => {
                 if(players[id] == undefined){
                     let sid = new SteamID(id);
                     steamids.push(id);
-                    sid = sid.getSteamID64(); 
+                    sid = sid.getSteamID64();
                     steamids64.push(sid);
                     players[id] = {
-                        'name' : log.names[id],
+                        'name' : '',
                         'steamid64' : sid,
                         'avatar' : '',
                         'games_played' : 0,
@@ -100,16 +124,16 @@ router.get('/:option', async (req, res) => {
                 }
                 else {
                     players[id].games_tied += 1;
-                    players[id].name = log.names[id];
                 }
             }
             }
-            
+
             getSteamProfiles(steamids64).then(result => {
             for(let r of result){
                 let sid3 = new SteamID(r._id);
                 sid3 = sid3.getSteam3RenderedID()
-                players[sid3].avatar = r.avatar; 
+                players[sid3].avatar = r.avatar;
+                players[sid3].name = r.personaname;
             }
             res.status(200).json(players)
             })

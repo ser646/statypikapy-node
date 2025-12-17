@@ -43,34 +43,54 @@ router.get('/:option', async (req, res, next) => {
         });
     }
     else {
-        if(option == "weekly" || option == "monthly" || option == "all"){
+        if(option == "weekly" || option == "monthly" || option == "all" || option == "event_christmas_2025"){
             let time_range = option;
             let dt = new Date();
-            if(time_range == 'all')dt = 1;
-            else if(time_range == 'weekly')dt =  dateFunctions.startOfWeek(dt);
-            else if(time_range == 'monthly')dt =  dateFunctions.startOfMonth(dt);
-            let z = new Date(dt);
-            z = z.getTime()
+            let matchQuery = {};
+
+            if(time_range == 'event_christmas_2025'){
+                // Event timeframe: 19.12.2025 16:00 till 4.01.2026 00:00
+                let eventStart = dateFunctions.event_christmas_2025_Start();
+                let eventEnd = dateFunctions.event_christmas_2025_End();
+                matchQuery = {
+                    'players_count': {
+                        '$lt': lt,
+                        '$gt' : gt
+                    },
+                    'info.date': {
+                        '$gte': eventStart.getTime() / 1000,
+                        '$lte': eventEnd.getTime() / 1000
+                    }
+                };
+            } else {
+                if(time_range == 'all')dt = 1;
+                else if(time_range == 'weekly')dt =  dateFunctions.startOfWeek(dt);
+                else if(time_range == 'monthly')dt =  dateFunctions.startOfMonth(dt);
+                let z = new Date(dt);
+                z = z.getTime()
+
+                matchQuery = {
+                    'players_count': {
+                        '$lt': lt,
+                        '$gt' : gt
+                    },
+                    'info.date': {
+                        '$gt': z/1000
+                    }
+                };
+            }
 
             db.collection('logs').aggregate([
                 {
-                    '$match': {
-                        'players_count': {
-                            '$lt': lt,
-                            '$gt' : gt
-                        },
-                        'info.date': {
-                            '$gt': z/1000
-                        }
-                    }
+                    '$match': matchQuery
                 },
                 {
                 '$project': {
-                    '_id': 1, 
-                    'map': '$info.map', 
-                    'date': '$info.date', 
+                    '_id': 1,
+                    'map': '$info.map',
+                    'date': '$info.date',
                     'result': {
-                        'Red': '$teams.Red.score', 
+                        'Red': '$teams.Red.score',
                         'Blue': '$teams.Blue.score'
                     }
                 }
@@ -99,7 +119,7 @@ router.get('/:option', async (req, res, next) => {
 router.get('/fetch', async (req, res) => {
     const diff = req.body.ids|| await require('./shared/diff.js')();
     const fetchMatch = require('./shared/fetch.js');
-    
+
     console.log("Amount of logs requested to fetch: " + diff.length)
     let i = 0;
 	let c = 0;
@@ -107,7 +127,7 @@ router.get('/fetch', async (req, res) => {
 
         if(i >= diff.length - 1)clearInterval(interval);
         else {
-            if(c == 0){	
+            if(c == 0){
                 if(i % 400 == 0 && i != 0) {
                     c++;
                     i++;
@@ -147,7 +167,7 @@ router.delete('/', async (req, res) => {
             })
         })
     }
-    else res.status(400).json({status : "Failure"});  
+    else res.status(400).json({status : "Failure"});
 })
 
 router.delete('/:id', async (req, res) => {
