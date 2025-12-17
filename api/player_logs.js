@@ -27,28 +27,51 @@ router.get('/:player_id', async (req, res) => {
     }
 
     if(!time_range) time_range = "all"
-    if(time_range == "all" || time_range == "weekly" || time_range == "monthly"){
+    if(time_range == "all" || time_range == "weekly" || time_range == "monthly" || time_range == "event_christmas_2025"){
         let dt = new Date();
-        if(time_range == 'all')dt = 1;
-        else if(time_range == 'weekly')dt =  dateFunctions.startOfWeek(dt);
-        else if(time_range == 'monthly')dt =  dateFunctions.startOfMonth(dt);
-        let z = new Date(dt);
-        z = z.getTime()
+        let matchQuery = {};
+
+        if(time_range == 'event_christmas_2025'){
+            // Event timeframe: 19.12.2025 16:00 till 4.01.2026 00:00
+            let eventStart = dateFunctions.event_christmas_2025_Start();
+            let eventEnd = dateFunctions.event_christmas_2025_End();
+            matchQuery = {
+                ['players.'+p_id]: {
+                    '$exists': true
+                },
+                'info.date': {
+                    '$gte': eventStart.getTime() / 1000,
+                    '$lte': eventEnd.getTime() / 1000
+                },
+                'players_count': {
+                    '$lt': lt,
+                    '$gt' : gt
+                }
+            };
+        } else {
+            if(time_range == 'all')dt = 1;
+            else if(time_range == 'weekly')dt =  dateFunctions.startOfWeek(dt);
+            else if(time_range == 'monthly')dt =  dateFunctions.startOfMonth(dt);
+            let z = new Date(dt);
+            z = z.getTime()
+
+            matchQuery = {
+                ['players.'+p_id]: {
+                    '$exists': true
+                },
+                'info.date': {
+                    '$gt': z / 1000
+                },
+                'players_count': {
+                    '$lt': lt,
+                    '$gt' : gt
+                }
+            };
+        }
 
         db.collection('logs').aggregate([
             {
-                '$match': {
-                    ['players.'+p_id]: {
-                        '$exists': true
-                    }, 
-                    'info.date': {
-                        '$gt': z / 1000
-                    }, 
-                    'players_count': {
-                        '$lt': lt,
-                        '$gt' : gt
-                    },
-                }
+                '$match': matchQuery
             },
             { '$skip': Number(offset) },
             { '$limit': Number(limit) },
@@ -59,7 +82,7 @@ router.get('/:player_id', async (req, res) => {
                 },
             {
                 '$project': {
-                'map': '$info.map', 
+                'map': '$info.map',
                 'team' : '$players.'+p_id+'.team',
                 'score' : {
                     'Red' : '$teams.Red.score',
@@ -68,41 +91,41 @@ router.get('/:player_id', async (req, res) => {
                 'result' : {
                     "$switch": {
                     "branches": [
-                        { "case": 
-                        { 
+                        { "case":
+                        {
                             '$and': [
                             {'$eq' : ['$players.'+p_id+'.team','Red']},
                             {"$gt": [ '$teams.Red.score', '$teams.Blue.score' ]}
                             ]
                         },
-                        "then": 'won' 
+                        "then": 'won'
                         },
-                        { "case": 
-                        { 
+                        { "case":
+                        {
                             '$and': [
                             {'$eq' : ['$players.'+p_id+'.team','Blue']},
                             {"$gt": [ '$teams.Blue.score', '$teams.Red.score' ]}
                             ]
                         },
-                        "then": 'won' 
+                        "then": 'won'
                         },
-                        { "case": 
-                        { 
+                        { "case":
+                        {
                             '$and': [
                             {'$eq' : ['$players.'+p_id+'.team','Blue']},
                             {"$lt": [ '$teams.Blue.score', '$teams.Red.score' ]}
                             ]
                         },
-                        "then": 'lost' 
+                        "then": 'lost'
                         },
-                        { "case": 
-                        { 
+                        { "case":
+                        {
                             '$and': [
                             {'$eq' : ['$players.'+p_id+'.team','Red']},
                             {"$lt": [ '$teams.Red.score', '$teams.Blue.score' ]}
                             ]
                         },
-                        "then": 'lost' 
+                        "then": 'lost'
                         }
                     ],
                     "default": 'tied'
@@ -116,11 +139,11 @@ router.get('/:player_id', async (req, res) => {
                     'dapm':'$players.'+p_id+'.dapm',
                     'kpd':'$players.'+p_id+'.kpd',
                     'cpc':'$players.'+p_id+'.cpc'
-                }, 
+                },
                 'classes': {
                     '$map': {
-                    'input': '$players.'+p_id+'.class_stats', 
-                    'as': 'class', 
+                    'input': '$players.'+p_id+'.class_stats',
+                    'as': 'class',
                     'in': '$$class.type'
                     }
                 }

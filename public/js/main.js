@@ -94,13 +94,13 @@ const store = new Vuex.Store({
 });
 
 var hof_card = {
-  props: ["title", "param"],
+  props: ["title", "param", "filterClass"],
   template: "#hof_card",
   store,
   data: function () {
     return {
       expand_players_list: false,
-      filter_class: false,
+      filter_class: this.filterClass || false,
       filter_maps: [],
       test: store.state.updating,
       loading: false,
@@ -252,6 +252,11 @@ var app = new Vue({
         player_logs: {},
       },
       all: {
+        scores: false,
+        logs: false,
+        player_logs: {},
+      },
+      event_christmas_2025: {
         scores: false,
         logs: false,
         player_logs: {},
@@ -542,7 +547,8 @@ var app = new Vue({
             imageUrl = r[0].avatar;
             imageUrl = imageUrl.slice(0, -4) + "_full" + imageUrl.slice(-4);
             $("#avatar").css("background-image", "url(" + imageUrl + ")");
-            $("#avatar").on("click", function () {
+            $("#avatar").attr("title", "Open steam profile");
+            $("#avatar").off("click").on("click", function () {
               window.open(r[0].profileurl, "_blank");
             });
             $("#avatar").show();
@@ -726,7 +732,7 @@ var app = new Vue({
         hash = window.location.hash.split("/");
         hash[0] = "#";
         hash[2] = str;
-        if (str == "logs") hash[3] = "";
+        if (str == "logs" || str == "hof") hash[3] = "";
         else if (str == "score" && this.selected_player)
           hash[3] = this.selected_player;
         window.location.hash = hash.join("/");
